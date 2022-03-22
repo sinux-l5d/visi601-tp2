@@ -4,6 +4,7 @@ from scipy.sparse.linalg import splu
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import matplotlib.animation as animation
+from math import log10
 
 
 class Grid:
@@ -98,7 +99,29 @@ class Grid:
         """ Retourne le laplacien de Dirichlet et retourne la matrice creuse 
             --> juste changer les -(len.. ) en -4 constant
         """
-        ...
+        LIGS = []  # les lignes des coefficients
+        COLS = []  # les colonnes des coefficients
+        VALS = []  # les valeurs des coefficients
+
+        # on parcourt les indices
+        for k in self.index.values():
+            # on calcule les voisins de l'indice
+            voisins = self.neighbors(k)
+            nbvoisins = len(voisins)
+
+            # on met pour valeur - 4 si on est sur (i,i)
+            LIGS.append(k)
+            COLS.append(k)
+            VALS.append(-4.0)
+
+            # on met pour valeur 1 si on est sur une colonne d'un voisin
+            for v in voisins:
+                LIGS.append(k)
+                COLS.append(v)
+                VALS.append(1.0)
+
+        L = coo_matrix((VALS, (LIGS, COLS)), shape=(n, n))
+        return L.tocsc()
 
     def Laplacian(self):
         """ Retourne le laplacien et retourne la matrice creuse """
@@ -146,6 +169,22 @@ class Grid:
             img[k[0], k[1]] = V[idx]
         return img
 
+    def implicitEulerD(self, U0, T, dt):
+        """"
+        A partir du vecteur de valeurs U0, calcule U(T) en itérant des pas dt successifs. 
+        permet d'obtenir une marge d'erreur plus petite par rapport a explicitEuler
+        avec l'utilistion du Laplacian D
+        """
+        Id = self.Identity()
+        U = np.array(U0)
+        L = self.LaplacianD()
+        lu = splu(Id - dt * L)
+
+        for _ in np.arange(0, T, dt):
+            U = lu.solve(U)
+
+        return U
+
     def implicitEuler(self, U0, T, dt):
         """"
         A partir du vecteur de valeurs U0, calcule U(T) en itérant des pas dt successifs. 
@@ -176,6 +215,15 @@ class Grid:
         diffusion = self.implicitEuler(vecteur, T, dt)
         return self.vectorToImage(diffusion)
 
+    def diffuseImageD(self, Img, T, dt):
+        """
+        A partir d'une image N&B Img, diffuse cette image pendant un temps T, par pas dt, et retourne l'image résultante
+        avec l'utilistion du Laplacian D
+        """
+        vecteur = self.imageToVector(Img)
+        diffusion = self.implicitEulerD(vecteur, T, dt)
+        return self.vectorToImage(diffusion)
+
     def diffuseImageRGB(self, Img, T, dt):
         """
         A partir d'une image N&B Img, diffuse cette image pendant un temps T, par pas dt, et retourne l'image résultante
@@ -183,7 +231,27 @@ class Grid:
         red = self.diffuseImage(Img[:, :, 0], T, dt)
         green = self.diffuseImage(Img[:, :, 1], T, dt)
         blue = self.diffuseImage(Img[:, :, 2], T, dt)
+        #Si on utilise le LaPlacianD pour effectuer le changement : 
+        #red = self.diffuseImageD(Img[:, :, 0], T, dt)
+        #green = self.diffuseImageD(Img[:, :, 1], T, dt)
+        #blue = self.diffuseImageD(Img[:, :, 2], T, dt)
         return np.stack((red, green, blue), axis=2)
+
+    def EQM(self, u,g):
+        vecU = np.array(self.imageToVector(u))
+        vecG = np.array(self.imageToVector(g))
+        return 1/(3*len(u)) * np.sum((vecU-vecG)**2)
+        # return 1/(3*len(u)) * sum([ (ku - kg)**2 for ku, kg in zip(vecU,vecG) ] )
+        
+
+    def PSNR(self, u,g):
+        #PSNR=10log10(v2/EQM)
+        #avec v la valeure maximale dans l'image
+        return 10 * log10(255**2/self.EQM(u,g))
+
+
+    def PSNR_RGB(self, u,g):
+        ...
 
 
 def testlaplacian():
@@ -229,8 +297,36 @@ def diffusionimg():
     plt.imshow(img_diffuse)
     plt.show()
 
+def EQMnb():
+    img = mpimg.imread('images/mandrill-240-b02.png')
+
+    largeur = img.shape[0]
+    hauteur = img.shape[1]
+    D = Grid(largeur, hauteur)
+    nb = D.EQM(img, D.diffuseImageRGB(img, 20.0, 5.0))
+    print(f"{nb=}")
+
+def qII_4():
+    """" Pas DU TOUT ce qu'on veut """
+    image_org = mpimg.imread('images/mandrill-240-b02.png')
+    psnr = []
+    for i in range(1,16):
+        width, height, n = image_org.shape
+        D = Grid( width, height )
+        # F    it 20 itérations de pas 0.1 pour arriver au temps 2
+        image_mod = D.diffuseImageRGB( image_org, i*0.1, 0.1)
+        psnr.append(D.PSNR(image_mod,image_org))
+        
+    # plt.imshow(psnr,cmap='gray',vmin=0.0,vmax=1.0)
+    # plt.show()
+    x = np.array(np.arange(0.1, 1.6, 0.1))
+    y = np.array(psnr)
+    plt.plot(x, y, color = "red", marker = "o", label = "Array elements")
+    plt.legend()
+    plt.show()
 
 if __name__ == "__main__":
-    diffusionimg()
+    # diffusionimg()
+    qII_4()
     # print(D.Identity())
     # print(D.Laplacian())
