@@ -50,7 +50,7 @@ class Grid:
         """
         return self.J[idx]
 
-    def _neighbors_of(self, i, j):
+    def _neighbors_coords(self, i, j):
         yield i-1, j
         yield i+1, j
         yield i, j-1
@@ -67,7 +67,7 @@ class Grid:
         except IndexError:
             return []
 
-        for ni, nj in self._neighbors_of(i, j):
+        for ni, nj in self._neighbors_coords(i, j):
             if (ni, nj) in self.index:
                 N.append(self.getIndex(ni, nj))
 
@@ -231,27 +231,37 @@ class Grid:
         red = self.diffuseImage(Img[:, :, 0], T, dt)
         green = self.diffuseImage(Img[:, :, 1], T, dt)
         blue = self.diffuseImage(Img[:, :, 2], T, dt)
-        #Si on utilise le LaPlacianD pour effectuer le changement : 
+        # Si on utilise le LaPlacianD pour effectuer le changement :
         #red = self.diffuseImageD(Img[:, :, 0], T, dt)
         #green = self.diffuseImageD(Img[:, :, 1], T, dt)
         #blue = self.diffuseImageD(Img[:, :, 2], T, dt)
         return np.stack((red, green, blue), axis=2)
 
-    def EQM(self, u,g):
+    def EQM(self, u, g):
         vecU = np.array(self.imageToVector(u))
         vecG = np.array(self.imageToVector(g))
-        return 1/(3*len(u)) * np.sum((vecU-vecG)**2)
+        return 1/(3*u.shape[0]) * np.sum((vecU-vecG)**2)
+        # n = u.shape[0]
+        # res = 0
+        # for i in range(n):
+        #     res += (u[i]-g[i])**2
+        # return res/(3*n)
+
         # return 1/(3*len(u)) * sum([ (ku - kg)**2 for ku, kg in zip(vecU,vecG) ] )
-        
 
-    def PSNR(self, u,g):
-        #PSNR=10log10(v2/EQM)
-        #avec v la valeure maximale dans l'image
-        return 10 * log10(255**2/self.EQM(u,g))
+    def PSNR(self, u, g):
+        # PSNR=10log10(v2/EQM)
+        # avec v la valeure maximale dans l'image
+        v = np.max(u)
+        return 10 * np.log10(v**2/self.EQM(u, g))
 
-
-    def PSNR_RGB(self, u,g):
-        ...
+    def PSNR_RGB(self, u, g):
+        """
+        Retourne la valeur du PSNR entre deux images rgb : originale et differente
+        """
+        r, g, b = imageToVector(originale)
+        r2, g2, b2 = imageToVector(differente)
+        return (PSNR(r, r2)+PSNR(g, g2)+PSNR(b, b2))/3
 
 
 def testlaplacian():
@@ -297,6 +307,7 @@ def diffusionimg():
     plt.imshow(img_diffuse)
     plt.show()
 
+
 def EQMnb():
     img = mpimg.imread('images/mandrill-240-b02.png')
 
@@ -306,24 +317,27 @@ def EQMnb():
     nb = D.EQM(img, D.diffuseImageRGB(img, 20.0, 5.0))
     print(f"{nb=}")
 
+
 def qII_4():
     """" Pas DU TOUT ce qu'on veut """
-    image_org = mpimg.imread('images/mandrill-240-b02.png')
+    image_org = mpimg.imread('images/mandrill-240.png')
+    image_bruite = mpimg.imread('images/mandrill-240-b02.png')
     psnr = []
-    for i in range(1,16):
+    for i in range(1, 16):
         width, height, n = image_org.shape
-        D = Grid( width, height )
+        D = Grid(width, height)
         # F    it 20 itérations de pas 0.1 pour arriver au temps 2
-        image_mod = D.diffuseImageRGB( image_org, i*0.1, 0.1)
-        psnr.append(D.PSNR(image_mod,image_org))
-        
+        image_mod = D.diffuseImageRGB(image_bruite, i*0.1, 0.1)
+        psnr.append(D.PSNR(image_mod, image_org))
+
     # plt.imshow(psnr,cmap='gray',vmin=0.0,vmax=1.0)
     # plt.show()
     x = np.array(np.arange(0.1, 1.6, 0.1))
     y = np.array(psnr)
-    plt.plot(x, y, color = "red", marker = "o", label = "Array elements")
+    plt.plot(x, y, color="red", marker="o", label="Array elements")
     plt.legend()
     plt.show()
+
 
 if __name__ == "__main__":
     # diffusionimg()
