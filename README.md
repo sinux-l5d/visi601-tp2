@@ -1,16 +1,14 @@
-NEYRAT Juliette 
-LEONARD Simon 
-CMI INFO L3 
-TP2
+Juliette NEYRAT & Simon LEONARD (CMI INFO L3)
 
-# Construction de l’opérateur Laplacien
+
+# VISI601 | TP2 | Construction de l’opérateur Laplacien
 
 ## Une classe Grid pour représenter le domaine
 
-#### La méthode Grid.number() : 
-permet de numeroter les pixels dans self.index.
+#### La méthode Grid.number()
+Elle permet de numeroter les pixels dans self.index.
 Pour cela, nous avons crée la liste d'indice qui va de 0 à la taille de la matrice (c'est a dire nbrow*nbcol)
-Il s'agit donc d'un dictionnaiure possédant les coordonnées en clé et l'indice en valeur.
+Il s'agit donc d'un dictionnaire possédant les coordonnées en clé et l'indice en valeur.
 
 ## Voisins dans la grille
 #### La méthode Grid.neighbors(indice):
