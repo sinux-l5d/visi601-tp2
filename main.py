@@ -238,9 +238,9 @@ class Grid:
         return np.stack((red, green, blue), axis=2)
 
     def EQM(self, u, g):
-        vecU = np.array(self.imageToVector(u))
-        vecG = np.array(self.imageToVector(g))
-        return 1/(3*u.shape[0]) * np.sum((vecU-vecG)**2)
+        # vecU = np.array(self.imageToVector(u))
+        # vecG = np.array(self.imageToVector(g))
+        return 1/(3*u.shape[0]) * np.sum((u-g)**2)
         # n = u.shape[0]
         # res = 0
         # for i in range(n):
