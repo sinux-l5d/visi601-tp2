@@ -63,3 +63,5 @@ On applique simplement la formule donnée c'est a dire :
     : vecU l'image a partirt du vecteur U 
     : vecG l'image a partirt du vecteur G
 
+
+Malheureusement, nous n'obtenons pas la bonne courbe, qui est dans les négatifs...
